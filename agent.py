@@ -65,25 +65,24 @@ class Agent():
     def train(self, num_episodes = 100, max_steps = 100):
         for episode in tqdm.tqdm(range(num_episodes), desc = 'Training', unit = 'episode', position = 0, leave = True):
             init_model, state, log_prob = self.env.reset()
-            state = torch.tensor(state, device = self.device, dtype = torch.float)
+            state = torch.tensor(state, device=self.device, dtype=torch.float)
+
             log_probs = []
             rewards = []
+
             for step in range(max_steps):
                 action, current_log_prob = self.select_action(state)
                 next_state, reward, done = self.env.step(action)
-                next_state = torch.tensor(next_state, device = self.device, dtype = torch.float)
-                reward = torch.tensor([reward], device = self.device, dtype = torch.float)  
-                # log_probs = torch.tensor([log_probs], device = self.device, dtype = torch.float)
-            
+                next_state = torch.tensor(next_state, device=self.device, dtype=torch.float)
+                reward = torch.tensor([reward], device=self.device, dtype=torch.float)
                 log_probs.append(current_log_prob)
                 rewards.append(reward)
-
                 
                 # self.memory.push(state, action, next_state, reward)
                 
                 state = next_state
             
-                self.optimize_model()
+
                 
                 if done:
                     break
@@ -104,12 +103,13 @@ class Agent():
                 policy_loss.append(-log_prob * G)
             policy_loss = torch.stack(policy_loss).sum()
 
-            self.optimizer.zero_grad()
-            policy_loss.backward()
-            self.optimizer.step()
+            # self.optimizer.zero_grad()
+            # policy_loss.backward()
+            # self.optimizer.step()
+            self.optimize_model()
             
             self.target_net.load_state_dict(self.policy_net.state_dict())
-            print(f'Episode {episode + 1}, Reward = {reward.values()}, Observations = {self.env.get_observation()}')
+            print(f'Episode {episode + 1}, Reward = {reward.item()}, Observations = {self.env.get_observation()}')
             self.save('prunedmodel/pruned_model.pth', 'prunedmodel/dqn.pth')
         print('Training complete')
     
