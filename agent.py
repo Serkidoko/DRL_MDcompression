@@ -62,7 +62,7 @@ class Agent():
         loss.backward()
         self.optimizer.step()
         
-    def train(self, num_episodes = 100, max_steps = 100):
+    def train(self, num_episodes = 1000, max_steps = 100):
         for episode in tqdm.tqdm(range(num_episodes), desc = 'Training', unit = 'episode', position = 0, leave = True):
             init_model, state, log_prob = self.env.reset()
             state = torch.tensor(state, device=self.device, dtype=torch.float)
