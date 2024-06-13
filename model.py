@@ -16,10 +16,25 @@ class Model(nn.Module):
         out = self.l2(out)
         return F.softmax(out, dim=1)
     
-class DQN(nn.Module):
+# class DQN(nn.Module):
 
+#     def __init__(self, n_observations, n_actions):
+#         super(DQN, self).__init__()
+#         self.layer1 = nn.Linear(n_observations, 128)
+#         self.layer2 = nn.Linear(128, 128)
+#         self.layer3 = nn.Linear(128, n_actions)
+
+#     def forward(self, x):
+#         x = F.relu(self.layer1(x))
+#         x = F.relu(self.layer2(x))
+#         return self.layer3(x)
+    
+# Transition = namedtuple('Transition',
+#                         ('state', 'action', 'next_state', 'reward'))
+
+class PolicyNetwork(nn.Module):
     def __init__(self, n_observations, n_actions):
-        super(DQN, self).__init__()
+        super(PolicyNetwork, self).__init__()
         self.layer1 = nn.Linear(n_observations, 128)
         self.layer2 = nn.Linear(128, 128)
         self.layer3 = nn.Linear(128, n_actions)
@@ -27,11 +42,10 @@ class DQN(nn.Module):
     def forward(self, x):
         x = F.relu(self.layer1(x))
         x = F.relu(self.layer2(x))
-        return self.layer3(x)
-    
+        return F.softmax(self.layer3(x), dim=1)
+
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward'))
-
 
 class ReplayMemory(object):
 
@@ -46,3 +60,4 @@ class ReplayMemory(object):
 
     def __len__(self):
         return len(self.memory)
+    

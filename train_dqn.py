@@ -1,8 +1,7 @@
 from agent import *
 from env import *
 from utils import *
-from train_dqn import *
-from model import *
+from model import PolicyNetwork, Model
 
 from torchvision.datasets import MNIST
 from torchvision.transforms import ToTensor
@@ -20,8 +19,11 @@ print('Device: ', device)
 env = PruningEnv(model, train_loader, device, layers_name=['l1', 'l2'])
 n_actions = env.n_actions
 n_observations = env.n_observations
-DQN_model = DQN(n_observations, n_actions).to(device)
-agent = Agent(env, DQN_model, device)
+# DQN_model = DQN(n_observations, n_actions).to(device)
+# agent = Agent(env, DQN_model, device)
+
+policy_model = PolicyNetwork(n_observations, n_actions).to(device)
+agent = Agent(env, policy_model, device)
 
 
 agent.train()
