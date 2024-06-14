@@ -4,6 +4,7 @@ import numpy as np
 import tqdm
 from torch.distributions import Categorical
 from model import *
+import os
 
 class Agent():
     def __init__(self, env, model, device = 'cuda' if torch.cuda.is_available() else 'cpu', epsilon = 0.1,
@@ -62,7 +63,12 @@ class Agent():
         loss.backward()
         self.optimizer.step()
         
-    def train(self, num_episodes = 1000, max_steps = 100):
+    def train(self, num_episodes = 1000, max_steps = 100, checkpoint = None):
+        start_episode = 0
+
+        if checkpoint is not None:
+            start_episode = self.load_checkpoint(checkpoint)
+
         for episode in tqdm.tqdm(range(num_episodes), desc = 'Training', unit = 'episode', position = 0, leave = True):
             init_model, state, log_prob = self.env.reset()
             state = torch.tensor(state, device=self.device, dtype=torch.float)
@@ -77,7 +83,7 @@ class Agent():
                 reward = torch.tensor([reward], device=self.device, dtype=torch.float)
                 log_probs.append(current_log_prob)
                 rewards.append(reward)
-                
+                                                
                 # self.memory.push(state, action, next_state, reward)
                 
                 state = next_state
@@ -99,22 +105,42 @@ class Agent():
             G = (G - G.mean()) / (G.std() + 1e-9)
 
             policy_loss = []
-            for log_prob, G in zip(log_probs_np, G):
-                policy_loss.append(-log_prob * G)
+            for log_prob, g in zip(log_probs, G):
+                policy_loss.append(-log_prob * g)
             policy_loss = torch.stack(policy_loss).sum()
 
-            # self.optimizer.zero_grad()
-            # policy_loss.backward()
-            # self.optimizer.step()
+            self.optimizer.zero_grad()
+            policy_loss.backward()
+            self.optimizer.step()
             self.optimize_model()
             
             self.target_net.load_state_dict(self.policy_net.state_dict())
             print(f'Episode {episode + 1}, Reward = {reward.item()}, Observations = {self.env.get_observation()}')
-            self.save('prunedmodel/pruned_model.pth', 'prunedmodel/dqn.pth')
+            if (episode + 1) % 50 == 0:
+                self.save(episode + 1, 'prunedmodel/pruned_model_last.pth', 'prunedmodel/dqn.pth')
+
         print('Training complete')
     
-    def save(self, pruned_model_path, dqn_path):
-        torch.save(self.env.model.state_dict(), pruned_model_path)
+    def save(self, episode, pruned_model_path, dqn_path):
+        checkpoint_path = f'prunedmodel/checkpoint_{episode}.pth'
+        torch.save({
+            'episode': episode,
+            'model_state_dict': self.model.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+            'memory': self.memory
+        }, checkpoint_path)
+        torch.save(self.env.model.state_dict(), pruned_model_path)  
         torch.save(self.model.state_dict(), dqn_path)
+        print(f'Checkpoint saved at {checkpoint_path}')
+        
+    def load_checkpoint(self, checkpoint):
+        if os.path.isfile(checkpoint):
+            checkpoint = torch.load(checkpoint)
+            self.model.load_state_dict(checkpoint['model_state_dict'])
+            self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            self.memory = checkpoint['memory']
+            print(f"Checkpoint loaded successfully from '{checkpoint}'")
+        else:
+            raise FileNotFoundError(f"Checkpoint file '{checkpoint}' not found")
     
     
